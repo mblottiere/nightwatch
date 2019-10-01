@@ -1,3 +1,4 @@
+import { spawn } from "child_process";
 import Octokit from "@octokit/rest";
 
 const octokit = new Octokit();
@@ -15,6 +16,10 @@ enum POLL_RESULT {
 function notifier(result: POLL_RESULT): void {
   if (result === POLL_RESULT.REVIEWABLE) {
     console.log("Yeah some music");
+    const process = spawn("pmidi", ["-p", "128:0", "./songs/imperial.mid"]);
+    process.on("error", err => {
+      console.error("Failed to play midi:", err);
+    });
   }
   if (result === POLL_RESULT.NOTHING) {
     console.log("Nothing to do");
