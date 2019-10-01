@@ -2,11 +2,14 @@ import Octokit from "@octokit/rest";
 
 const octokit = new Octokit();
 
+const OWNER = "mblottiere";
+const REPO = "nightwatch";
+
 const REMIND_INTERVAL = 1000 * 60;
 
 enum POLL_RESULT {
   NOTHING,
-  REVIEWABLE,
+  REVIEWABLE
 }
 
 function notifier(result: POLL_RESULT): void {
@@ -18,22 +21,28 @@ function notifier(result: POLL_RESULT): void {
   }
 }
 
-async function checkPR({ owner, repo }: { owner: string; repo: string }): Promise<POLL_RESULT> {
+async function checkPR({
+  owner,
+  repo
+}: {
+  owner: string;
+  repo: string;
+}): Promise<POLL_RESULT> {
   const { data: pullRequests } = await octokit.pulls.list({ owner, repo });
   const detailPromises = pullRequests
     .filter(pr => pr.state === "open")
-    .map(pr => octokit.pulls.get({ owner, repo, pull_number: pr.number }));
+    .map(pr =>
+      octokit.pulls.listReviews({ owner, repo, pull_number: pr.number })
+    );
   const details = await Promise.all(detailPromises);
 
-  const reviewable = details.reduce(
-    (acc: number, { data: pr }) => {
-      if (!pr.mergeable) {
-        return acc + 1;
-      }
-      return acc;
-    },
-    0
-  );
+  const reviewable = details.reduce((acc: number, { data: reviews }) => {
+    const approved = reviews.reduce(
+      (acc: number, review) => (review.state === "APPROVED" ? acc + 1 : acc),
+      0
+    );
+    return !approved ? acc + 1 : acc;
+  }, 0);
 
   if (reviewable) {
     return POLL_RESULT.REVIEWABLE;
@@ -42,7 +51,7 @@ async function checkPR({ owner, repo }: { owner: string; repo: string }): Promis
 }
 
 setInterval(() => {
-  checkPR({ owner: "mblottiere", repo: "nightwatch" }).then(notifier);
+  checkPR({ owner: OWNER, repo: REPO }).then(notifier);
 }, REMIND_INTERVAL);
 
-checkPR({ owner: "mblottiere", repo: "nightwatch" }).then(notifier);
+checkPR({ owner: OWNER, repo: REPO }).then(notifier);
