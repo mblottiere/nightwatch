@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node ./src/index.ts"
+    "dev": "ts-node ./src/index.ts",
+    "prettify": "prettier --write ./src/*"
   },
   "dependencies": {
     "@octokit/rest": "^16.30.1"
